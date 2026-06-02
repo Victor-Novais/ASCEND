@@ -38,20 +38,21 @@ const adminNavItems = [
 ];
 
 const clienteNavItems = [
-  { label: "Dashboard",      icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Avaliacoes",     icon: ClipboardCheck,  path: "/dashboard/assessments" },
-  { label: "Planos de Acao", icon: Target,          path: "/action-plans" },
-  { label: "Relatorios",     icon: FileBarChart,    path: "/dashboard/reports" },
-  { label: "Analytics",      icon: BarChart2,       path: "/analytics" },
-  { label: "Riscos",         icon: AlertTriangle,   path: "/risks" },
-  { label: "PDTI",           icon: FileText,        path: "/pdti" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Empresas", icon: Building2, path: "/dashboard/companies" },
+  { label: "Avaliacoes", icon: ClipboardCheck, path: "/dashboard/assessments" },
+  { label: "Planos de Acao", icon: Target, path: "/action-plans" },
+  { label: "Relatorios", icon: FileBarChart, path: "/dashboard/reports" },
+  { label: "Analytics", icon: BarChart2, path: "/analytics" },
+  { label: "Riscos", icon: AlertTriangle, path: "/risks" },
+  { label: "PDTI", icon: FileText, path: "/pdti" },
 ];
 
 const collaboratorNavItems = [
-  { label: "Dashboard",      icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Avaliacoes",     icon: ClipboardCheck,  path: "/dashboard/assessments" },
-  { label: "Planos de Acao", icon: Target,          path: "/action-plans" },
-  { label: "Relatorios",     icon: FileBarChart,    path: "/dashboard/reports" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Avaliacoes", icon: ClipboardCheck, path: "/dashboard/assessments" },
+  { label: "Planos de Acao", icon: Target, path: "/action-plans" },
+  { label: "Relatorios", icon: FileBarChart, path: "/dashboard/reports" },
 ];
 
 export default function DashboardLayout() {
