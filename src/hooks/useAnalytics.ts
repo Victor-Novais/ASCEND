@@ -16,6 +16,7 @@ export function useCompanyComparison(companyIds: number[]) {
     queryKey: ["analytics", "comparison", companyIds],
     queryFn: () => analyticsService.getComparison(companyIds),
     enabled: companyIds.length >= 2,
+    retry: false,
   });
 }
 
@@ -35,6 +36,7 @@ export function usePlatformStats() {
     queryKey: ["analytics", "platform-stats"],
     queryFn: () => analyticsService.getPlatformStats(),
     enabled: user?.role === "ADMIN",
+    retry: false,
   });
 }
 
