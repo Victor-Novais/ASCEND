@@ -118,6 +118,11 @@
   }
 }
 
+@media print {
+  nav, aside, header, button, [data-print-hide] { display: none !important; }
+  body { background: white; }
+}
+
 @layer utilities {
   .ascend-card {
     @apply bg-card rounded-xl border border-border/60 p-6;

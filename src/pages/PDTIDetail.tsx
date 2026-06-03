@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, BarChart3, CheckCircle2, Download, FileText, Loader2, Plus, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, BookOpen, CheckCircle2, Download, Edit2, FileText, Loader2, Plus, Printer, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PDTIStatus, type PDTIDiagnostic, type PDTIAction, type PDTIIndicator, type PDTIObjective, type PDTI } from "@/types/pdti";
+import PDTIDocumentView from "@/components/PDTIDocumentView";
 
 const identityFields = [
   { key: "mission", label: "Missão" },
@@ -216,6 +217,7 @@ export default function PDTIDetailPage() {
   const downloadPdtiDocx = useDownloadPdtiDocx();
   const { loading: docExportLoading, exportDoc } = useDocumentExport();
 
+  const [viewMode, setViewMode] = useState<"edit" | "document">("edit");
   const [overviewDraft, setOverviewDraft] = useState<Record<string, string>>({});
   const [diagnosticDraft, setDiagnosticDraft] = useState<PDTIDiagnostic>({
     strengths: [],
@@ -467,6 +469,32 @@ export default function PDTIDetailPage() {
 
         <div className="flex flex-wrap gap-2">
           <Badge className={statusStyles[plan.status]}>{plan.status}</Badge>
+
+          <Button
+            type="button"
+            variant={viewMode === "document" ? "default" : "outline"}
+            onClick={() => setViewMode(viewMode === "document" ? "edit" : "document")}
+          >
+            {viewMode === "document" ? (
+              <Edit2 className="mr-2 h-4 w-4" />
+            ) : (
+              <BookOpen className="mr-2 h-4 w-4" />
+            )}
+            {viewMode === "document" ? "Editar" : "Visualizar Documento"}
+          </Button>
+
+          {viewMode === "document" && (
+            <Button
+              type="button"
+              variant="outline"
+              data-print-hide
+              onClick={() => window.print()}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir
+            </Button>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="outline" disabled={docExportLoading}>
@@ -492,6 +520,11 @@ export default function PDTIDetailPage() {
         </div>
       </div>
 
+      {viewMode === "document" ? (
+        <PDTIDocumentView pdti={plan} />
+      ) : null}
+
+      {viewMode === "edit" ? (
       <Tabs defaultValue="identidade" className="space-y-4">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="identidade">Identidade</TabsTrigger>
@@ -1072,6 +1105,7 @@ export default function PDTIDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+      ) : null}
     </div>
   );
 }
