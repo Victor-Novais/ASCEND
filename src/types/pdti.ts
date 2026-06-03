@@ -76,6 +76,13 @@ export interface PDTI {
   legalRequirements?: string | null;
   currentScenario?: string | null;
   desiredScenario?: string | null;
+  responsible?: string | null;
+  swotStrengths?: string | null;
+  swotWeaknesses?: string | null;
+  swotOpportunities?: string | null;
+  swotThreats?: string | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
   diagnostic?: PDTIDiagnostic | null;
   objectives?: PDTIObjective[];
   actions?: PDTIAction[];
@@ -100,6 +107,13 @@ export interface CreatePDTIInput {
   legalRequirements?: string | null;
   currentScenario?: string | null;
   desiredScenario?: string | null;
+  responsible?: string | null;
+  swotStrengths?: string | null;
+  swotWeaknesses?: string | null;
+  swotOpportunities?: string | null;
+  swotThreats?: string | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
   diagnostic?: PDTIDiagnostic | null;
   objectives?: PDTIObjective[];
   actions?: PDTIAction[];

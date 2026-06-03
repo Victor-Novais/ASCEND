@@ -222,7 +222,13 @@ export default function PDTIPage() {
                       <TableCell className="font-medium">{plan.title}</TableCell>
                       <TableCell>{plan.company?.name ?? `Empresa #${plan.companyId}`}</TableCell>
                       <TableCell>{plan.year}</TableCell>
-                      <TableCell>{plan.period}</TableCell>
+                      <TableCell>
+                        {plan.period ? (
+                          <Badge className="border-slate-200 bg-slate-100 text-slate-700">{plan.period}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge className={statusStyles[plan.status]}>{plan.status.replaceAll("_", " ")}</Badge>
                       </TableCell>

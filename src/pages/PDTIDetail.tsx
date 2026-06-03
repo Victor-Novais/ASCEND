@@ -25,14 +25,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PDTIStatus, type PDTIDiagnostic, type PDTIAction, type PDTIIndicator, type PDTIObjective, type PDTI } from "@/types/pdti";
 
-const overviewFields = [
+const identityFields = [
   { key: "mission", label: "Missão" },
   { key: "vision", label: "Visão" },
   { key: "values", label: "Valores" },
+] as const;
+
+const scenarioFields = [
+  { key: "currentScenario", label: "Cenário Atual (AS-IS)" },
+  { key: "desiredScenario", label: "Cenário Desejado (TO-BE)" },
+  { key: "legalRequirements", label: "Requisitos Legais e Normativos" },
   { key: "strategicAlignment", label: "Alinhamento Estratégico" },
-  { key: "legalRequirements", label: "Requisitos Legais" },
-  { key: "currentScenario", label: "Cenário Atual" },
-  { key: "desiredScenario", label: "Cenário Desejado" },
 ] as const;
 
 const statusStyles: Record<PDTIStatus, string> = {
@@ -250,6 +253,12 @@ export default function PDTIDetailPage() {
       legalRequirements: plan.legalRequirements ?? "",
       currentScenario: plan.currentScenario ?? "",
       desiredScenario: plan.desiredScenario ?? "",
+      period: plan.period ?? "",
+      responsible: plan.responsible ?? "",
+      swotStrengths: plan.swotStrengths ?? "",
+      swotWeaknesses: plan.swotWeaknesses ?? "",
+      swotOpportunities: plan.swotOpportunities ?? "",
+      swotThreats: plan.swotThreats ?? "",
     });
     setDiagnosticDraft(normalizeDiagnostic(plan.diagnostic));
     setObjectivesDraft(plan.objectives ?? []);
@@ -286,6 +295,23 @@ export default function PDTIDetailPage() {
       toast.success("Diagnóstico atualizado com sucesso.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao salvar diagnóstico.");
+    }
+  };
+
+  const handleSaveSWOT = async () => {
+    try {
+      await updatePDTI.mutateAsync({
+        id: planId,
+        payload: {
+          swotStrengths: overviewDraft.swotStrengths || null,
+          swotWeaknesses: overviewDraft.swotWeaknesses || null,
+          swotOpportunities: overviewDraft.swotOpportunities || null,
+          swotThreats: overviewDraft.swotThreats || null,
+        },
+      });
+      toast.success("Análise SWOT salva com sucesso.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao salvar análise SWOT.");
     }
   };
 
@@ -466,19 +492,87 @@ export default function PDTIDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+      <Tabs defaultValue="identidade" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="identidade">Identidade</TabsTrigger>
           <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
-          <TabsTrigger value="objetivos">Objetivos Estratégicos</TabsTrigger>
+          <TabsTrigger value="swot">SWOT</TabsTrigger>
+          <TabsTrigger value="objetivos">Objetivos</TabsTrigger>
           <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
           <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
           <TabsTrigger value="exportar">Exportar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="identidade" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            {overviewFields.map((field) => (
+            {identityFields.map((field) => (
+              <Card key={field.key} className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{field.label}</CardTitle>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleSaveSection(field.key)}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    className="min-h-28"
+                    value={overviewDraft[field.key] ?? ""}
+                    onChange={(event) =>
+                      setOverviewDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                    }
+                  />
+                </CardContent>
+              </Card>
+            ))}
+
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Período de Vigência</CardTitle>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void handleSaveSection("period")}>
+                    Salvar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  value={overviewDraft.period ?? ""}
+                  onChange={(event) => setOverviewDraft((current) => ({ ...current, period: event.target.value }))}
+                  placeholder="2025-2026"
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Responsável pelo PDTI</CardTitle>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void handleSaveSection("responsible")}>
+                    Salvar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  value={overviewDraft.responsible ?? ""}
+                  onChange={(event) => setOverviewDraft((current) => ({ ...current, responsible: event.target.value }))}
+                  placeholder="Nome do responsável"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="diagnostico" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {scenarioFields.map((field) => (
               <Card key={field.key} className="rounded-2xl">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -505,16 +599,14 @@ export default function PDTIDetailPage() {
               </Card>
             ))}
           </div>
-        </TabsContent>
 
-        <TabsContent value="diagnostico" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-2">
             <div>
-              <h2 className="text-lg font-semibold">Diagnóstico do Assessment</h2>
-              <p className="text-sm text-muted-foreground">Edite os pontos fortes, melhorias, oportunidades e ameaças.</p>
+              <h2 className="text-lg font-semibold">Análise do Assessment (arrays)</h2>
+              <p className="text-sm text-muted-foreground">Pontos fortes, melhorias, oportunidades e ameaças identificados.</p>
             </div>
             <Button type="button" variant="outline" onClick={() => void handleSaveDiagnostic()}>
-              Salvar Diagnóstico
+              Salvar Análise
             </Button>
           </div>
 
@@ -565,6 +657,84 @@ export default function PDTIDetailPage() {
                 </Card>
               );
             })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="swot" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Análise SWOT</h2>
+              <p className="text-sm text-muted-foreground">Forças, Fraquezas, Oportunidades e Ameaças do ambiente de TI.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={() => void handleSaveSWOT()}>
+              Salvar SWOT
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="rounded-2xl border-emerald-200 bg-emerald-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-emerald-800">Forças (Strengths)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  className="min-h-40 border-emerald-200 bg-white focus-visible:ring-emerald-400"
+                  placeholder="Descreva os pontos fortes internos..."
+                  value={overviewDraft.swotStrengths ?? ""}
+                  onChange={(event) =>
+                    setOverviewDraft((current) => ({ ...current, swotStrengths: event.target.value }))
+                  }
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-red-200 bg-red-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-red-800">Fraquezas (Weaknesses)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  className="min-h-40 border-red-200 bg-white focus-visible:ring-red-400"
+                  placeholder="Descreva as fraquezas internas..."
+                  value={overviewDraft.swotWeaknesses ?? ""}
+                  onChange={(event) =>
+                    setOverviewDraft((current) => ({ ...current, swotWeaknesses: event.target.value }))
+                  }
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-blue-200 bg-blue-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-blue-800">Oportunidades (Opportunities)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  className="min-h-40 border-blue-200 bg-white focus-visible:ring-blue-400"
+                  placeholder="Descreva as oportunidades externas..."
+                  value={overviewDraft.swotOpportunities ?? ""}
+                  onChange={(event) =>
+                    setOverviewDraft((current) => ({ ...current, swotOpportunities: event.target.value }))
+                  }
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-orange-200 bg-orange-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-orange-800">Ameaças (Threats)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  className="min-h-40 border-orange-200 bg-white focus-visible:ring-orange-400"
+                  placeholder="Descreva as ameaças externas..."
+                  value={overviewDraft.swotThreats ?? ""}
+                  onChange={(event) =>
+                    setOverviewDraft((current) => ({ ...current, swotThreats: event.target.value }))
+                  }
+                />
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
