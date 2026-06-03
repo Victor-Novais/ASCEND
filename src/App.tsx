@@ -28,6 +28,7 @@ import AssessmentQuestionPage from "@/pages/assessment/[id]";
 import AssessmentReportPage from "@/pages/assessment/report";
 import AssessmentReportByIdPage from "@/pages/assessment/[id]/report";
 import AssessmentDetailsPage from "@/pages/assessment/[id]/details";
+import GovernancePage from "@/pages/Governance";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="/dashboard/assessments/:id" element={<AssessmentStepper />} />
                 <Route path="/dashboard/reports" element={<ReportsPage />} />
                 <Route path="/dashboard/reports/:id" element={<ReportPage />} />
+                <Route path="/governance" element={<GovernancePage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/action-plans" element={<ActionPlansPage />} />
                 <Route path="/pdti" element={<PDTIPage />} />

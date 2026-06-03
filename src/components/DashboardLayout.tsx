@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   FileBarChart,
   FileText,
+  Landmark,
   LayoutDashboard,
   LibraryBig,
   LogOut,
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Governanca TI", icon: Landmark, path: "/governance" },
   { label: "Questoes", icon: LibraryBig, path: "/dashboard/questions" },
   { label: "Empresas", icon: Building2, path: "/dashboard/companies" },
   { label: "Avaliacoes", icon: ClipboardCheck, path: "/dashboard/assessments" },
@@ -39,6 +41,7 @@ const adminNavItems = [
 
 const clienteNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Governanca TI", icon: Landmark, path: "/governance" },
   { label: "Empresas", icon: Building2, path: "/dashboard/companies" },
   { label: "Avaliacoes", icon: ClipboardCheck, path: "/dashboard/assessments" },
   { label: "Planos de Acao", icon: Target, path: "/action-plans" },
@@ -50,6 +53,7 @@ const clienteNavItems = [
 
 const collaboratorNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Governanca TI", icon: Landmark, path: "/governance" },
   { label: "Avaliacoes", icon: ClipboardCheck, path: "/dashboard/assessments" },
   { label: "Planos de Acao", icon: Target, path: "/action-plans" },
   { label: "Relatorios", icon: FileBarChart, path: "/dashboard/reports" },
