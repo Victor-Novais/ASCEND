@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import html2canvas from "html2canvas";
+import { Camera } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { RiskMatrixCell } from "@/types/risk";
@@ -10,6 +13,7 @@ type Props = {
   data: RiskMatrixCell[];
   onCellClick: (probability: number, impact: number) => void;
   selectedCell?: { probability: number; impact: number } | null;
+  companyId?: number | null;
 };
 
 function getCellColor(score: number) {
@@ -19,11 +23,32 @@ function getCellColor(score: number) {
   return "bg-red-200 hover:bg-red-300";
 }
 
-export default function RiskMatrix({ data, onCellClick, selectedCell }: Props) {
+export default function RiskMatrix({ data, onCellClick, selectedCell, companyId }: Props) {
+  const matrixRef = useRef<HTMLDivElement>(null);
   const cells = new Map(data.map((cell) => [`${cell.probability}-${cell.impact}`, cell]));
 
+  async function exportMatrix() {
+    if (!matrixRef.current) return;
+    const canvas = await html2canvas(matrixRef.current, { useCORS: true });
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `risco-matrix-${companyId ?? "export"}.png`;
+    a.click();
+  }
+
   return (
-    <div className="overflow-x-auto">
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => void exportMatrix()}
+        className="absolute right-0 top-0 z-10 flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm hover:bg-muted"
+      >
+        <Camera className="h-3.5 w-3.5" />
+        Exportar PNG
+      </button>
+      <div ref={matrixRef}>
+      <div className="overflow-x-auto">
       <div className="grid min-w-[760px] grid-cols-[140px_repeat(5,minmax(96px,1fr))] gap-2">
         <div />
         {impactLabels.map((label, index) => (
@@ -81,6 +106,8 @@ export default function RiskMatrix({ data, onCellClick, selectedCell }: Props) {
             })}
           </div>
         ))}
+      </div>
+      </div>
       </div>
     </div>
   );

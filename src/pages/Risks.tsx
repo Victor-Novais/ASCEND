@@ -5,7 +5,9 @@ import * as XLSX from "xlsx";
 import {
   AlertTriangle,
   CheckCircle,
+  ChevronDown,
   Download,
+  FileText,
   Flame,
   Loader2,
   Plus,
@@ -16,7 +18,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDocumentExport } from "@/hooks/useDocumentExport";
-import { downloadRisksPdf } from "@/services/documents.service";
+import { downloadRisksExcel, downloadRisksPdf } from "@/services/documents.service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import RiskDetail from "@/components/risks/RiskDetail";
 import RiskForm from "@/components/risks/RiskForm";
 import RiskMatrix from "@/components/RiskMatrix";
@@ -370,26 +378,47 @@ export default function RisksPage() {
             )}
             Exportar XLSX
           </Button>
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            disabled={pdfExportLoading}
-            onClick={() => {
-              const cId = isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId;
-              if (!cId) {
-                toast.warning("Selecione uma empresa para exportar o relatório PDF.");
-                return;
-              }
-              void exportDoc(() => downloadRisksPdf(cId), "relatório de riscos PDF");
-            }}
-          >
-            {pdfExportLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            Exportar Relatório PDF
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl" disabled={pdfExportLoading}>
+                {pdfExportLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Exportar Relatório
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  const cId = isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId;
+                  if (!cId) {
+                    toast.warning("Selecione uma empresa para exportar o relatório.");
+                    return;
+                  }
+                  void exportDoc(() => downloadRisksPdf(cId), "PDF de riscos");
+                }}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                PDF - Plano de Tratamento
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const cId = isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId;
+                  if (!cId) {
+                    toast.warning("Selecione uma empresa para exportar o relatório.");
+                    return;
+                  }
+                  void exportDoc(() => downloadRisksExcel(cId), "Excel de riscos");
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Excel - Registro de Riscos
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" className="rounded-xl" onClick={() => setIsGenerateOpen(true)}>
             <Sparkles className="mr-2 h-4 w-4" />
             Gerar do Assessment
@@ -455,6 +484,7 @@ export default function RisksPage() {
             <RiskMatrix
               data={matrixQuery.data ?? []}
               selectedCell={selectedCell}
+              companyId={isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId}
               onCellClick={(probability, impact) =>
                 setSelectedCell((current) =>
                   current?.probability === probability && current?.impact === impact

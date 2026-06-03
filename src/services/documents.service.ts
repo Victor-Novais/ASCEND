@@ -27,6 +27,15 @@ export async function downloadRisksPdf(companyId: number): Promise<void> {
   );
 }
 
+export async function downloadRisksExcel(companyId: number): Promise<void> {
+  const filename = `plano-tratamento-riscos-${companyId}.xlsx`;
+  await downloadFileFromApi(
+    `${API_BASE_URL}/documents/risks/excel?companyId=${companyId}`,
+    filename,
+    getToken(),
+  );
+}
+
 export async function downloadActionPlansPdf(companyId: number): Promise<void> {
   const filename = `Planos_Acao_${format(new Date(), "yyyy-MM-dd")}.pdf`;
   await downloadFileFromApi(
