@@ -15,6 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExportPDTI, usePDTI, useUpdatePDTI } from "@/hooks/usePDTI";
 import { useDownloadPdtiDocx, useDownloadPdtiPdf } from "@/hooks/useExports";
+import { useDocumentExport } from "@/hooks/useDocumentExport";
+import { downloadPdtiPdf, downloadPdtiDocx } from "@/services/documents.service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PDTIStatus, type PDTIDiagnostic, type PDTIAction, type PDTIIndicator, type PDTIObjective, type PDTI } from "@/types/pdti";
 
 const overviewFields = [
@@ -203,6 +211,7 @@ export default function PDTIDetailPage() {
   const updatePDTI = useUpdatePDTI();
   const downloadPdtiPdf = useDownloadPdtiPdf();
   const downloadPdtiDocx = useDownloadPdtiDocx();
+  const { loading: docExportLoading, exportDoc } = useDocumentExport();
 
   const [overviewDraft, setOverviewDraft] = useState<Record<string, string>>({});
   const [diagnosticDraft, setDiagnosticDraft] = useState<PDTIDiagnostic>({
@@ -432,32 +441,28 @@ export default function PDTIDetailPage() {
 
         <div className="flex flex-wrap gap-2">
           <Badge className={statusStyles[plan.status]}>{plan.status}</Badge>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleExportPdf()}
-            disabled={downloadPdtiPdf.isPending}
-          >
-            {downloadPdtiPdf.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            PDF
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleExportWord()}
-            disabled={downloadPdtiDocx.isPending}
-          >
-            {downloadPdtiDocx.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="mr-2 h-4 w-4" />
-            )}
-            Word
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" disabled={docExportLoading}>
+                {docExportLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiPdf(planId), "PDF")}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiDocx(planId), "Word (.docx)")}>
+                <FileText className="mr-2 h-4 w-4" />
+                Baixar Word (.docx)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

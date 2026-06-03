@@ -15,6 +15,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useDocumentExport } from "@/hooks/useDocumentExport";
+import { downloadRisksPdf } from "@/services/documents.service";
 import RiskDetail from "@/components/risks/RiskDetail";
 import RiskForm from "@/components/risks/RiskForm";
 import RiskMatrix from "@/components/RiskMatrix";
@@ -267,6 +269,7 @@ export default function RisksPage() {
   const updateRisk = useUpdateRisk();
   const deleteRisk = useDeleteRisk();
   const generateFromAssessment = useGenerateRisksFromAssessment();
+  const { loading: pdfExportLoading, exportDoc } = useDocumentExport();
 
   const risks = risksQuery.data ?? [];
   const selectedRisk = detailQuery.data ?? risks.find((risk) => risk.id === selectedRiskId) ?? null;
@@ -366,6 +369,26 @@ export default function RisksPage() {
               <Download className="mr-2 h-4 w-4" />
             )}
             Exportar XLSX
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            disabled={pdfExportLoading}
+            onClick={() => {
+              const cId = isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId;
+              if (!cId) {
+                toast.warning("Selecione uma empresa para exportar o relatório PDF.");
+                return;
+              }
+              void exportDoc(() => downloadRisksPdf(cId), "relatório de riscos PDF");
+            }}
+          >
+            {pdfExportLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Exportar Relatório PDF
           </Button>
           <Button variant="outline" className="rounded-xl" onClick={() => setIsGenerateOpen(true)}>
             <Sparkles className="mr-2 h-4 w-4" />

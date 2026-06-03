@@ -5,9 +5,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  Download,
   FileSpreadsheet,
   ListChecks,
+  Loader2,
   Pencil,
   PlayCircle,
   Plus,
@@ -16,6 +19,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useDocumentExport } from "@/hooks/useDocumentExport";
+import { downloadActionPlansPdf } from "@/services/documents.service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { utils, writeFile } from "xlsx";
 import ActionPlan5W2HCard from "@/components/action-plans/ActionPlan5W2HCard";
 import ActionPlanForm from "@/components/action-plans/ActionPlanForm";
@@ -137,6 +148,7 @@ export default function ActionPlansPage() {
   const deleteActionPlan = useDeleteActionPlan();
   const exportActionPlans = useExportActionPlans();
   const generateFromAssessment = useGenerateFromAssessment();
+  const { loading: pdfExportLoading, exportDoc } = useDocumentExport();
 
   if (!isEvaluatorRole(user?.role)) {
     return <Navigate to="/dashboard" replace />;
@@ -273,10 +285,37 @@ export default function ActionPlansPage() {
             <Sparkles className="mr-2 h-4 w-4" />
             Gerar do Assessment
           </Button>
-          <Button type="button" variant="outline" onClick={() => void handleExport5W2H()} disabled={exportActionPlans.isPending}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Exportar 5W2H
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" disabled={exportActionPlans.isPending || pdfExportLoading}>
+                {exportActionPlans.isPending || pdfExportLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Exportar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void handleExport5W2H()}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Exportar Excel (5W2H)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!firstCompanyId) {
+                    toast.warning("Nenhuma empresa disponível para exportar o PDF.");
+                    return;
+                  }
+                  void exportDoc(() => downloadActionPlansPdf(firstCompanyId), "PDF de planos de ação");
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             type="button"
             onClick={() => {
