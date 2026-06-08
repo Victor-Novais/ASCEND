@@ -1,18 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, BarChart3, BookOpen, CheckCircle2, Download, Edit2, FileText, Loader2, Plus, Printer, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Download, Edit2, FileText, Loader2, Plus, Printer, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 import { useExportPDTI, usePDTI, useUpdatePDTI } from "@/hooks/usePDTI";
 import { useDownloadPdtiDocx, useDownloadPdtiPdf } from "@/hooks/useExports";
 import { useDocumentExport } from "@/hooks/useDocumentExport";
@@ -46,6 +55,41 @@ const statusStyles: Record<PDTIStatus, string> = {
   [PDTIStatus.VIGENTE]: "border-emerald-200 bg-emerald-100 text-emerald-800",
   [PDTIStatus.ENCERRADO]: "border-red-200 bg-red-100 text-red-800",
 };
+
+const statusFlow: PDTIStatus[] = [
+  PDTIStatus.RASCUNHO,
+  PDTIStatus.EM_REVISAO,
+  PDTIStatus.APROVADO,
+  PDTIStatus.VIGENTE,
+  PDTIStatus.ENCERRADO,
+];
+
+function getNextStatus(current: PDTIStatus): PDTIStatus | null {
+  const index = statusFlow.indexOf(current);
+  if (index === -1 || index >= statusFlow.length - 1) return null;
+  return statusFlow[index + 1];
+}
+
+function getPreviousStatus(current: PDTIStatus): PDTIStatus | null {
+  const index = statusFlow.indexOf(current);
+  if (index <= 0) return null;
+  return statusFlow[index - 1];
+}
+
+function getNextStatusLabel(current: PDTIStatus): string {
+  const labels: Record<PDTIStatus, string> = {
+    [PDTIStatus.RASCUNHO]: "Enviar para Revisão",
+    [PDTIStatus.EM_REVISAO]: "Aprovar",
+    [PDTIStatus.APROVADO]: "Tornar Vigente",
+    [PDTIStatus.VIGENTE]: "Encerrar",
+    [PDTIStatus.ENCERRADO]: "",
+  };
+  return labels[current];
+}
+
+function formatStatusLabel(status: PDTIStatus) {
+  return status.replaceAll("_", " ");
+}
 
 const diagnosticMeta = [
   { key: "strengths", label: "Pontos Fortes", icon: ShieldCheck, accent: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -208,6 +252,8 @@ export default function PDTIDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const planId = Number(id);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
 
   const pdtiQuery = usePDTI(planId);
   const exportQuery = useExportPDTI(planId);
@@ -240,6 +286,8 @@ export default function PDTIDetailPage() {
     currentValue: "0",
     frequency: "Mensal",
   });
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approvedByDraft, setApprovedByDraft] = useState("");
 
   useEffect(() => {
     const plan = pdtiQuery.data;
@@ -363,6 +411,67 @@ export default function PDTIDetailPage() {
     }
   };
 
+  const handleStatusChange = async (status: PDTIStatus, extra?: { approvedBy?: string; approvedAt?: string }) => {
+    try {
+      await updatePDTI.mutateAsync({
+        id: planId,
+        payload: { status, ...extra },
+      });
+      toast.success(`PDTI movido para ${formatStatusLabel(status)}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar status.");
+    }
+  };
+
+  const handleAdvanceStatus = () => {
+    const currentStatus = pdtiQuery.data?.status;
+    if (!currentStatus) return;
+
+    const nextStatus = getNextStatus(currentStatus);
+    if (!nextStatus) return;
+
+    if (nextStatus === PDTIStatus.APROVADO) {
+      setApprovedByDraft(pdtiQuery.data?.approvedBy ?? "");
+      setApproveDialogOpen(true);
+      return;
+    }
+
+    void handleStatusChange(nextStatus);
+  };
+
+  const handleConfirmApproval = async () => {
+    if (!approvedByDraft.trim()) {
+      toast.error("Informe quem aprovou o PDTI.");
+      return;
+    }
+
+    try {
+      await updatePDTI.mutateAsync({
+        id: planId,
+        payload: {
+          status: PDTIStatus.APROVADO,
+          approvedBy: approvedByDraft.trim(),
+          approvedAt: new Date().toISOString(),
+        },
+      });
+      toast.success(`PDTI movido para ${formatStatusLabel(PDTIStatus.APROVADO)}`);
+      setApproveDialogOpen(false);
+      setApprovedByDraft("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao aprovar PDTI.");
+    }
+  };
+
+  const handleRevertStatus = () => {
+    const currentStatus = pdtiQuery.data?.status;
+    if (!currentStatus) return;
+
+    const previousStatus = getPreviousStatus(currentStatus);
+    if (!previousStatus) return;
+
+    void handleStatusChange(previousStatus);
+  };
+
   const handleAddIndicator = async () => {
     if (!newIndicatorDraft.name.trim()) {
       toast.error("Informe um nome para o KPI.");
@@ -424,6 +533,8 @@ export default function PDTIDetailPage() {
   }
 
   const exportedData = exportQuery.data ?? plan;
+  const nextStatus = getNextStatus(plan.status);
+  const previousStatus = getPreviousStatus(plan.status);
 
   const handleExportPdf = async () => {
     try {
@@ -463,8 +574,39 @@ export default function PDTIDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Badge className={statusStyles[plan.status]}>{plan.status}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-2">
+            <Badge className={statusStyles[plan.status]}>{formatStatusLabel(plan.status)}</Badge>
+            {nextStatus ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className={statusStyles[nextStatus]}
+                disabled={updatePDTI.isPending}
+                onClick={handleAdvanceStatus}
+              >
+                {updatePDTI.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ChevronRight className="mr-2 h-4 w-4" />
+                )}
+                {getNextStatusLabel(plan.status)}
+              </Button>
+            ) : null}
+            {isAdmin && previousStatus ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={updatePDTI.isPending}
+                onClick={handleRevertStatus}
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+            ) : null}
+          </div>
 
           <Button
             type="button"
@@ -1094,6 +1236,42 @@ export default function PDTIDetailPage() {
         </TabsContent>
       </Tabs>
       ) : null}
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aprovar PDTI</DialogTitle>
+            <DialogDescription>
+              Informe o responsável pela aprovação para mover o PDTI para o status Aprovado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="approved-by">
+              Aprovado por
+            </label>
+            <Input
+              id="approved-by"
+              placeholder="Nome do aprovador"
+              value={approvedByDraft}
+              onChange={(event) => setApprovedByDraft(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setApproveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className={statusStyles[PDTIStatus.APROVADO]}
+              disabled={updatePDTI.isPending}
+              onClick={() => void handleConfirmApproval()}
+            >
+              {updatePDTI.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirmar aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
