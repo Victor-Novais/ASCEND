@@ -1,5 +1,18 @@
 import { api } from "@/lib/api";
-import type { PDTI, PDTIExportData, PDTIDiagnostic, PDTIIndicator, PDTIObjective, PDTIAction, CreatePDTIInput, UpdatePDTIInput } from "@/types/pdti";
+import type {
+  PDTI,
+  PDTIExportData,
+  PDTIDiagnostic,
+  PDTIIndicator,
+  PDTIObjective,
+  PDTIAction,
+  CreatePDTIInput,
+  UpdatePDTIInput,
+  CreatePDTIObjectiveInput,
+  UpdatePDTIObjectiveInput,
+  CreatePDTIIndicatorInput,
+  UpdatePDTIIndicatorInput,
+} from "@/types/pdti";
 
 type PDTIListResponse = PDTI[] | { items?: PDTI[]; data?: PDTI[] };
 type PDTIResponse = PDTI | { data?: PDTI; item?: PDTI };
@@ -43,6 +56,25 @@ function normalizeList(response: PDTIListResponse): PDTI[] {
   return normalizeArray(response.items ?? response.data).map((item) => normalizePDTI(item));
 }
 
+type NestedEntityResponse<T> = T | { data?: T; item?: T };
+
+function normalizeObjective(response: NestedEntityResponse<PDTIObjective>): PDTIObjective {
+  const data = (response as { data?: PDTIObjective; item?: PDTIObjective }).data
+    ?? (response as { data?: PDTIObjective; item?: PDTIObjective }).item
+    ?? response;
+  return {
+    ...data,
+    actions: normalizeArray(data.actions),
+  };
+}
+
+function normalizeIndicator(response: NestedEntityResponse<PDTIIndicator>): PDTIIndicator {
+  const data = (response as { data?: PDTIIndicator; item?: PDTIIndicator }).data
+    ?? (response as { data?: PDTIIndicator; item?: PDTIIndicator }).item
+    ?? response;
+  return data;
+}
+
 export const pdtiService = {
   list(filters?: { companyId?: number; status?: string; assessmentId?: number }) {
     return api.get<PDTIListResponse>("/pdti", filters).then(normalizeList);
@@ -64,5 +96,31 @@ export const pdtiService = {
   },
   exportData(id: number) {
     return api.get<PDTIExportResponse>(`/pdti/${id}/export`).then((response) => normalizePDTI(response));
+  },
+  createObjective(pdtiId: number, payload: CreatePDTIObjectiveInput) {
+    return api
+      .post<NestedEntityResponse<PDTIObjective>>(`/pdti/${pdtiId}/objectives`, payload)
+      .then((response) => normalizeObjective(response));
+  },
+  updateObjective(pdtiId: number, objectiveId: number, payload: UpdatePDTIObjectiveInput) {
+    return api
+      .patch<NestedEntityResponse<PDTIObjective>>(`/pdti/${pdtiId}/objectives/${objectiveId}`, payload)
+      .then((response) => normalizeObjective(response));
+  },
+  removeObjective(pdtiId: number, objectiveId: number) {
+    return api.delete<void>(`/pdti/${pdtiId}/objectives/${objectiveId}`);
+  },
+  createIndicator(pdtiId: number, payload: CreatePDTIIndicatorInput) {
+    return api
+      .post<NestedEntityResponse<PDTIIndicator>>(`/pdti/${pdtiId}/indicators`, payload)
+      .then((response) => normalizeIndicator(response));
+  },
+  updateIndicator(pdtiId: number, indicatorId: number, payload: UpdatePDTIIndicatorInput) {
+    return api
+      .patch<NestedEntityResponse<PDTIIndicator>>(`/pdti/${pdtiId}/indicators/${indicatorId}`, payload)
+      .then((response) => normalizeIndicator(response));
+  },
+  removeIndicator(pdtiId: number, indicatorId: number) {
+    return api.delete<void>(`/pdti/${pdtiId}/indicators/${indicatorId}`);
   },
 };

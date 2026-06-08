@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, BarChart3, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Download, Edit2, FileText, Loader2, Plus, Printer, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Download, Edit2, FileText, Loader2, Pencil, Plus, Printer, ShieldCheck, Sparkles, Target, Trash2, TrendingUp } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +32,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { useExportPDTI, usePDTI, useUpdatePDTI } from "@/hooks/usePDTI";
+import {
+  useCreatePDTIIndicator,
+  useCreatePDTIObjective,
+  useDeletePDTIIndicator,
+  useDeletePDTIObjective,
+  useExportPDTI,
+  usePDTI,
+  useUpdatePDTI,
+  useUpdatePDTIIndicator,
+  useUpdatePDTIObjective,
+} from "@/hooks/usePDTI";
 import { useDownloadPdtiDocx, useDownloadPdtiPdf } from "@/hooks/useExports";
 import { useDocumentExport } from "@/hooks/useDocumentExport";
 import { downloadPdtiPdf, downloadPdtiDocx } from "@/services/documents.service";
@@ -90,6 +110,22 @@ function getNextStatusLabel(current: PDTIStatus): string {
 function formatStatusLabel(status: PDTIStatus) {
   return status.replaceAll("_", " ");
 }
+
+const emptyObjectiveForm = {
+  title: "",
+  description: "",
+  priority: "MEDIA",
+  status: "EM_REVISAO",
+};
+
+const emptyIndicatorForm = {
+  name: "",
+  unit: "%",
+  baseline: "0",
+  target: "100",
+  currentValue: "0",
+  frequency: "Mensal",
+};
 
 const diagnosticMeta = [
   { key: "strengths", label: "Pontos Fortes", icon: ShieldCheck, accent: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -258,6 +294,12 @@ export default function PDTIDetailPage() {
   const pdtiQuery = usePDTI(planId);
   const exportQuery = useExportPDTI(planId);
   const updatePDTI = useUpdatePDTI();
+  const createObjective = useCreatePDTIObjective(planId);
+  const updateObjective = useUpdatePDTIObjective(planId);
+  const deleteObjective = useDeletePDTIObjective(planId);
+  const createIndicator = useCreatePDTIIndicator(planId);
+  const updateIndicator = useUpdatePDTIIndicator(planId);
+  const deleteIndicator = useDeletePDTIIndicator(planId);
   const downloadPdtiPdf = useDownloadPdtiPdf();
   const downloadPdtiDocx = useDownloadPdtiDocx();
   const { loading: docExportLoading, exportDoc } = useDocumentExport();
@@ -270,22 +312,14 @@ export default function PDTIDetailPage() {
     opportunities: [],
     threats: [],
   });
-  const [objectivesDraft, setObjectivesDraft] = useState<PDTIObjective[]>([]);
-  const [indicatorsDraft, setIndicatorsDraft] = useState<PDTIIndicator[]>([]);
-  const [newObjectiveDraft, setNewObjectiveDraft] = useState({
-    title: "",
-    description: "",
-    priority: "MEDIA",
-    status: "EM_REVISAO",
-  });
-  const [newIndicatorDraft, setNewIndicatorDraft] = useState({
-    name: "",
-    unit: "%",
-    baseline: "0",
-    target: "100",
-    currentValue: "0",
-    frequency: "Mensal",
-  });
+  const [objectiveDialogOpen, setObjectiveDialogOpen] = useState(false);
+  const [editingObjective, setEditingObjective] = useState<PDTIObjective | null>(null);
+  const [objectiveForm, setObjectiveForm] = useState(emptyObjectiveForm);
+  const [deleteObjectiveTarget, setDeleteObjectiveTarget] = useState<PDTIObjective | null>(null);
+  const [indicatorDialogOpen, setIndicatorDialogOpen] = useState(false);
+  const [editingIndicator, setEditingIndicator] = useState<PDTIIndicator | null>(null);
+  const [indicatorForm, setIndicatorForm] = useState(emptyIndicatorForm);
+  const [deleteIndicatorTarget, setDeleteIndicatorTarget] = useState<PDTIIndicator | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approvedByDraft, setApprovedByDraft] = useState("");
 
@@ -309,8 +343,6 @@ export default function PDTIDetailPage() {
       swotThreats: plan.swotThreats ?? "",
     });
     setDiagnosticDraft(normalizeDiagnostic(plan.diagnostic));
-    setObjectivesDraft(plan.objectives ?? []);
-    setIndicatorsDraft(plan.indicators ?? []);
   }, [pdtiQuery.data]);
 
   const orderedActions = useMemo(() => {
@@ -363,51 +395,121 @@ export default function PDTIDetailPage() {
     }
   };
 
-  const handleAddObjective = async () => {
-    if (!newObjectiveDraft.title.trim()) {
+  const openCreateObjective = () => {
+    setEditingObjective(null);
+    setObjectiveForm(emptyObjectiveForm);
+    setObjectiveDialogOpen(true);
+  };
+
+  const openEditObjective = (objective: PDTIObjective) => {
+    setEditingObjective(objective);
+    setObjectiveForm({
+      title: objective.title,
+      description: objective.description ?? "",
+      priority: objective.priority,
+      status: objective.status,
+    });
+    setObjectiveDialogOpen(true);
+  };
+
+  const handleSubmitObjective = async () => {
+    if (!objectiveForm.title.trim()) {
       toast.error("Informe um título para o objetivo.");
       return;
     }
 
-    const objective: PDTIObjective = {
-      id: Date.now(),
-      pdtiId: planId,
-      title: newObjectiveDraft.title.trim(),
-      description: newObjectiveDraft.description.trim() || null,
-      priority: newObjectiveDraft.priority,
-      status: newObjectiveDraft.status,
-      actions: [],
+    const payload = {
+      title: objectiveForm.title.trim(),
+      description: objectiveForm.description.trim() || null,
+      priority: objectiveForm.priority,
+      status: objectiveForm.status,
     };
 
-    const next = [...objectivesDraft, objective];
-    setObjectivesDraft(next);
-    setNewObjectiveDraft({
-      title: "",
-      description: "",
-      priority: "MEDIA",
-      status: "EM_REVISAO",
-    });
-
     try {
-      await updatePDTI.mutateAsync({
-        id: planId,
-        payload: { objectives: next },
-      });
-      toast.success("Objetivo adicionado com sucesso.");
+      if (editingObjective) {
+        await updateObjective.mutateAsync({ objectiveId: editingObjective.id, payload });
+        toast.success("Objetivo atualizado com sucesso.");
+      } else {
+        await createObjective.mutateAsync(payload);
+        toast.success("Objetivo adicionado com sucesso.");
+      }
+      setObjectiveDialogOpen(false);
+      setEditingObjective(null);
+      setObjectiveForm(emptyObjectiveForm);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao adicionar objetivo.");
+      toast.error(error instanceof Error ? error.message : "Falha ao salvar objetivo.");
     }
   };
 
-  const handleSaveIndicators = async () => {
+  const handleDeleteObjective = async () => {
+    if (!deleteObjectiveTarget) return;
     try {
-      await updatePDTI.mutateAsync({
-        id: planId,
-        payload: { indicators: indicatorsDraft },
-      });
-      toast.success("Indicadores atualizados com sucesso.");
+      await deleteObjective.mutateAsync(deleteObjectiveTarget.id);
+      toast.success("Objetivo removido com sucesso.");
+      setDeleteObjectiveTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao salvar indicadores.");
+      toast.error(error instanceof Error ? error.message : "Falha ao excluir objetivo.");
+    }
+  };
+
+  const openCreateIndicator = () => {
+    setEditingIndicator(null);
+    setIndicatorForm(emptyIndicatorForm);
+    setIndicatorDialogOpen(true);
+  };
+
+  const openEditIndicator = (indicator: PDTIIndicator) => {
+    setEditingIndicator(indicator);
+    setIndicatorForm({
+      name: indicator.name,
+      unit: indicator.unit,
+      baseline: String(indicator.baseline),
+      target: String(indicator.target),
+      currentValue: String(indicator.currentValue),
+      frequency: indicator.frequency,
+    });
+    setIndicatorDialogOpen(true);
+  };
+
+  const handleSubmitIndicator = async () => {
+    if (!indicatorForm.name.trim()) {
+      toast.error("Informe um nome para o KPI.");
+      return;
+    }
+
+    const payload = {
+      name: indicatorForm.name.trim(),
+      unit: indicatorForm.unit.trim() || "%",
+      baseline: Number(indicatorForm.baseline) || 0,
+      target: Number(indicatorForm.target) || 0,
+      currentValue: Number(indicatorForm.currentValue) || 0,
+      frequency: indicatorForm.frequency.trim() || "Mensal",
+    };
+
+    try {
+      if (editingIndicator) {
+        await updateIndicator.mutateAsync({ indicatorId: editingIndicator.id, payload });
+        toast.success("Indicador atualizado com sucesso.");
+      } else {
+        await createIndicator.mutateAsync(payload);
+        toast.success("Indicador adicionado com sucesso.");
+      }
+      setIndicatorDialogOpen(false);
+      setEditingIndicator(null);
+      setIndicatorForm(emptyIndicatorForm);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao salvar indicador.");
+    }
+  };
+
+  const handleDeleteIndicator = async () => {
+    if (!deleteIndicatorTarget) return;
+    try {
+      await deleteIndicator.mutateAsync(deleteIndicatorTarget.id);
+      toast.success("Indicador removido com sucesso.");
+      setDeleteIndicatorTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao excluir indicador.");
     }
   };
 
@@ -470,50 +572,6 @@ export default function PDTIDetailPage() {
     if (!previousStatus) return;
 
     void handleStatusChange(previousStatus);
-  };
-
-  const handleAddIndicator = async () => {
-    if (!newIndicatorDraft.name.trim()) {
-      toast.error("Informe um nome para o KPI.");
-      return;
-    }
-
-    const indicator: PDTIIndicator = {
-      id: Date.now(),
-      pdtiId: planId,
-      name: newIndicatorDraft.name.trim(),
-      unit: newIndicatorDraft.unit.trim() || "%",
-      baseline: Number(newIndicatorDraft.baseline) || 0,
-      target: Number(newIndicatorDraft.target) || 0,
-      currentValue: Number(newIndicatorDraft.currentValue) || 0,
-      achievedPercent: (() => {
-        const target = Number(newIndicatorDraft.target) || 0;
-        if (!target) return 0;
-        return Math.min(100, Math.max(0, (Number(newIndicatorDraft.currentValue) / target) * 100));
-      })(),
-      frequency: newIndicatorDraft.frequency.trim() || "Mensal",
-    };
-
-    const next = [...indicatorsDraft, indicator];
-    setIndicatorsDraft(next);
-    setNewIndicatorDraft({
-      name: "",
-      unit: "%",
-      baseline: "0",
-      target: "100",
-      currentValue: "0",
-      frequency: "Mensal",
-    });
-
-    try {
-      await updatePDTI.mutateAsync({
-        id: planId,
-        payload: { indicators: next },
-      });
-      toast.success("KPI adicionado com sucesso.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao adicionar KPI.");
-    }
   };
 
   if (pdtiQuery.isLoading) {
@@ -910,65 +968,16 @@ export default function PDTIDetailPage() {
         </TabsContent>
 
         <TabsContent value="objetivos" className="space-y-4">
-          <div className="rounded-2xl border bg-card p-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Título do objetivo</label>
-                <Input
-                  value={newObjectiveDraft.title}
-                  onChange={(event) => setNewObjectiveDraft((current) => ({ ...current, title: event.target.value }))}
-                  placeholder="Ex: Modernizar infraestrutura de rede"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Prioridade</label>
-                <Select
-                  value={newObjectiveDraft.priority}
-                  onValueChange={(value) => setNewObjectiveDraft((current) => ({ ...current, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['ALTA','MEDIA','BAIXA'].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Status</label>
-                <Select
-                  value={newObjectiveDraft.status}
-                  onValueChange={(value) => setNewObjectiveDraft((current) => ({ ...current, status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(PDTIStatus).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <label className="mb-2 block text-sm font-medium">Descrição</label>
-              <Textarea
-                className="min-h-24"
-                value={newObjectiveDraft.description}
-                onChange={(event) => setNewObjectiveDraft((current) => ({ ...current, description: event.target.value }))}
-                placeholder="Descreva o objetivo estratégico"
-              />
-            </div>
-
-            <div className="mt-3 flex justify-end">
-              <Button type="button" onClick={() => void handleAddObjective()}>
-                Adicionar objetivo
-              </Button>
-            </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={openCreateObjective}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Objetivo
+            </Button>
           </div>
 
           <div className="space-y-3">
-            {objectivesDraft.map((objective) => (
+            {(plan.objectives ?? []).length ? (
+              (plan.objectives ?? []).map((objective) => (
               <Card key={objective.id} className="rounded-2xl">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-3">
@@ -976,8 +985,16 @@ export default function PDTIDetailPage() {
                       <CardTitle className="text-base">{objective.title}</CardTitle>
                       <p className="mt-1 text-xs text-muted-foreground">{objective.priority}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge className={statusStyles[objective.status as PDTIStatus] ?? "border-slate-200 bg-slate-100 text-slate-700"}>{objective.status}</Badge>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => openEditObjective(objective)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setDeleteObjectiveTarget(objective)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -1012,7 +1029,12 @@ export default function PDTIDetailPage() {
                   </Accordion>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+                Nenhum objetivo cadastrado ainda.
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -1059,66 +1081,11 @@ export default function PDTIDetailPage() {
         </TabsContent>
 
         <TabsContent value="indicadores" className="space-y-4">
-          <div className="rounded-2xl border bg-card p-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Nome do KPI</label>
-                <Input
-                  value={newIndicatorDraft.name}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Ex: Disponibilidade da infraestrutura"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Unidade</label>
-                <Input
-                  value={newIndicatorDraft.unit}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, unit: event.target.value }))}
-                  placeholder="%"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Baseline</label>
-                <Input
-                  type="number"
-                  value={newIndicatorDraft.baseline}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, baseline: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Meta</label>
-                <Input
-                  type="number"
-                  value={newIndicatorDraft.target}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, target: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Atual</label>
-                <Input
-                  type="number"
-                  value={newIndicatorDraft.currentValue}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, currentValue: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Frequência</label>
-                <Input
-                  value={newIndicatorDraft.frequency}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, frequency: event.target.value }))}
-                  placeholder="Mensal"
-                />
-              </div>
-            </div>
-
-            <div className="mt-3 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => void handleSaveIndicators()}>
-                Salvar indicadores
-              </Button>
-              <Button type="button" onClick={() => void handleAddIndicator()}>
-                Adicionar KPI
-              </Button>
-            </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={openCreateIndicator}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Indicador
+            </Button>
           </div>
 
           <Card className="rounded-2xl">
@@ -1133,11 +1100,12 @@ export default function PDTIDetailPage() {
                     <TableHead>Atual</TableHead>
                     <TableHead>% Atingido</TableHead>
                     <TableHead>Frequência</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {indicatorsDraft.length ? (
-                    indicatorsDraft.map((indicator) => {
+                  {(plan.indicators ?? []).length ? (
+                    (plan.indicators ?? []).map((indicator) => {
                       const baseline = toNumber(indicator.baseline);
                       const target = toNumber(indicator.target);
                       const current = toNumber(indicator.currentValue);
@@ -1159,12 +1127,24 @@ export default function PDTIDetailPage() {
                             </div>
                           </TableCell>
                           <TableCell>{indicator.frequency}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => openEditIndicator(indicator)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setDeleteIndicatorTarget(indicator)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="py-6 text-center text-muted-foreground">
                         Nenhum KPI cadastrado ainda.
                       </TableCell>
                     </TableRow>
@@ -1236,6 +1216,225 @@ export default function PDTIDetailPage() {
         </TabsContent>
       </Tabs>
       ) : null}
+
+      <Dialog
+        open={objectiveDialogOpen}
+        onOpenChange={(open) => {
+          setObjectiveDialogOpen(open);
+          if (!open) {
+            setEditingObjective(null);
+            setObjectiveForm(emptyObjectiveForm);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingObjective ? "Editar objetivo" : "Novo objetivo"}</DialogTitle>
+            <DialogDescription>
+              {editingObjective ? "Atualize os dados do objetivo estratégico." : "Cadastre um novo objetivo estratégico para o PDTI."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium">Título do objetivo</label>
+              <Input
+                value={objectiveForm.title}
+                onChange={(event) => setObjectiveForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Ex: Modernizar infraestrutura de rede"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium">Prioridade</label>
+                <Select
+                  value={objectiveForm.priority}
+                  onValueChange={(value) => setObjectiveForm((current) => ({ ...current, priority: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["ALTA", "MEDIA", "BAIXA"].map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium">Status</label>
+                <Select
+                  value={objectiveForm.status}
+                  onValueChange={(value) => setObjectiveForm((current) => ({ ...current, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(PDTIStatus).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {formatStatusLabel(value)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Descrição</label>
+              <Textarea
+                className="min-h-24"
+                value={objectiveForm.description}
+                onChange={(event) => setObjectiveForm((current) => ({ ...current, description: event.target.value }))}
+                placeholder="Descreva o objetivo estratégico"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setObjectiveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={createObjective.isPending || updateObjective.isPending}
+              onClick={() => void handleSubmitObjective()}
+            >
+              {(createObjective.isPending || updateObjective.isPending) ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {editingObjective ? "Salvar alterações" : "Criar objetivo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={indicatorDialogOpen}
+        onOpenChange={(open) => {
+          setIndicatorDialogOpen(open);
+          if (!open) {
+            setEditingIndicator(null);
+            setIndicatorForm(emptyIndicatorForm);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingIndicator ? "Editar indicador" : "Novo indicador"}</DialogTitle>
+            <DialogDescription>
+              {editingIndicator ? "Atualize os dados do KPI." : "Cadastre um novo indicador para o PDTI."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium">Nome do KPI</label>
+              <Input
+                value={indicatorForm.name}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Ex: Disponibilidade da infraestrutura"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Unidade</label>
+              <Input
+                value={indicatorForm.unit}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, unit: event.target.value }))}
+                placeholder="%"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Frequência</label>
+              <Input
+                value={indicatorForm.frequency}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, frequency: event.target.value }))}
+                placeholder="Mensal"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Baseline</label>
+              <Input
+                type="number"
+                value={indicatorForm.baseline}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, baseline: event.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium">Meta</label>
+              <Input
+                type="number"
+                value={indicatorForm.target}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, target: event.target.value }))}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium">Valor atual</label>
+              <Input
+                type="number"
+                value={indicatorForm.currentValue}
+                onChange={(event) => setIndicatorForm((current) => ({ ...current, currentValue: event.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIndicatorDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={createIndicator.isPending || updateIndicator.isPending}
+              onClick={() => void handleSubmitIndicator()}
+            >
+              {(createIndicator.isPending || updateIndicator.isPending) ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {editingIndicator ? "Salvar alterações" : "Criar indicador"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteObjectiveTarget} onOpenChange={(open) => !open && setDeleteObjectiveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir objetivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação remove permanentemente o objetivo
+              {deleteObjectiveTarget ? ` "${deleteObjectiveTarget.title}"` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void handleDeleteObjective()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteIndicatorTarget} onOpenChange={(open) => !open && setDeleteIndicatorTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir indicador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação remove permanentemente o indicador
+              {deleteIndicatorTarget ? ` "${deleteIndicatorTarget.name}"` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void handleDeleteIndicator()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
         <DialogContent>

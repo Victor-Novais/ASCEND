@@ -122,4 +122,26 @@ export interface CreatePDTIInput {
 
 export type UpdatePDTIInput = Partial<CreatePDTIInput>;
 
+export type CreatePDTIObjectiveInput = {
+  title: string;
+  description?: string | null;
+  priority: string;
+  status: string;
+  order?: number;
+};
+
+export type UpdatePDTIObjectiveInput = Partial<CreatePDTIObjectiveInput>;
+
+export type CreatePDTIIndicatorInput = {
+  name: string;
+  unit: string;
+  baseline: number | string;
+  target: number | string;
+  currentValue: number | string;
+  frequency: string;
+  order?: number;
+};
+
+export type UpdatePDTIIndicatorInput = Partial<CreatePDTIIndicatorInput>;
+
 export type PDTIExportData = PDTI;
