@@ -30,6 +30,7 @@ import {
 import { utils, writeFile } from "xlsx";
 import ActionPlan5W2HCard from "@/components/action-plans/ActionPlan5W2HCard";
 import ActionPlanForm from "@/components/action-plans/ActionPlanForm";
+import KanbanBoard from "@/components/action-plans/KanbanBoard";
 import {
   actionPlanCategoryLabels,
   actionPlanPriorityLabels,
@@ -135,8 +136,9 @@ export default function ActionPlansPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"table" | "5w2h">("table");
+  const [viewMode, setViewMode] = useState<"table" | "5w2h" | "kanban">("table");
   const [deleteTarget, setDeleteTarget] = useState<ActionPlan | null>(null);
+  const [advancingPlanId, setAdvancingPlanId] = useState<number | null>(null);
 
   const companiesQuery = useCompanies();
   const usersQuery = useUsers();
@@ -250,6 +252,27 @@ export default function ActionPlansPage() {
       navigate("/action-plans");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao gerar planos.");
+    }
+  };
+
+  const handleAdvancePlan = async (plan: ActionPlan) => {
+    const nextStatus =
+      plan.status === ActionPlanStatus.PENDENTE
+        ? ActionPlanStatus.EM_ANDAMENTO
+        : plan.status === ActionPlanStatus.EM_ANDAMENTO
+          ? ActionPlanStatus.CONCLUIDO
+          : null;
+
+    if (!nextStatus) return;
+
+    setAdvancingPlanId(plan.id);
+    try {
+      await updateActionPlan.mutateAsync({ id: plan.id, payload: { status: nextStatus } });
+      toast.success(`Plano movido para "${actionPlanStatusLabels[nextStatus]}".`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar status.");
+    } finally {
+      setAdvancingPlanId(null);
     }
   };
 
@@ -414,6 +437,15 @@ export default function ActionPlansPage() {
             >
               Visão 5W2H
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              className="rounded-full"
+              onClick={() => setViewMode("kanban")}
+            >
+              Kanban
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -438,6 +470,22 @@ export default function ActionPlansPage() {
                   />
                 ))}
               </div>
+            ) : (
+              <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+                Nenhum plano encontrado para os filtros atuais.
+              </div>
+            )
+          ) : viewMode === "kanban" ? (
+            plans.length ? (
+              <KanbanBoard
+                plans={plans}
+                advancingPlanId={advancingPlanId}
+                onEdit={(plan) => {
+                  setEditingPlan(plan);
+                  setFormOpen(true);
+                }}
+                onAdvance={handleAdvancePlan}
+              />
             ) : (
               <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
                 Nenhum plano encontrado para os filtros atuais.
