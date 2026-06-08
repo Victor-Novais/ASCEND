@@ -22,7 +22,7 @@ export interface PDTIIndicator {
   unit: string;
   baseline: number | string;
   target: number | string;
-  current: number | string;
+  currentValue: number | string;
   achievedPercent?: number;
   frequency: string;
   order?: number;
@@ -53,7 +53,6 @@ export interface PDTIObjective {
   title: string;
   description?: string | null;
   priority: string;
-  category: string;
   status: string;
   order?: number;
   actions?: PDTIAction[];
@@ -72,7 +71,8 @@ export interface PDTI {
   mission?: string | null;
   vision?: string | null;
   values?: string | null;
-  strategicAlignment?: string | null;
+  strategicGoals?: string | null;
+  generatedBy?: string | null;
   legalRequirements?: string | null;
   currentScenario?: string | null;
   desiredScenario?: string | null;
@@ -103,7 +103,7 @@ export interface CreatePDTIInput {
   mission?: string | null;
   vision?: string | null;
   values?: string | null;
-  strategicAlignment?: string | null;
+  strategicGoals?: string | null;
   legalRequirements?: string | null;
   currentScenario?: string | null;
   desiredScenario?: string | null;

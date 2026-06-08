@@ -26,6 +26,7 @@ export const riskStatusLabels: Record<RiskStatus, string> = {
   [RiskStatus.EM_TRATAMENTO]: "Em tratamento",
   [RiskStatus.MITIGADO]: "Mitigado",
   [RiskStatus.ACEITO]: "Aceito",
+  [RiskStatus.TRANSFERIDO]: "Transferido",
 };
 
 export const riskTreatmentLabels: Record<RiskTreatment, string> = {
@@ -75,6 +76,7 @@ export function getRiskStatusBadgeClass(status: RiskStatus | string) {
   if (status === RiskStatus.EM_TRATAMENTO) return "border-blue-200 bg-blue-50 text-blue-700";
   if (status === RiskStatus.MITIGADO) return "border-green-200 bg-green-50 text-green-700";
   if (status === RiskStatus.ACEITO) return "border-slate-200 bg-slate-100 text-slate-700";
+  if (status === RiskStatus.TRANSFERIDO) return "border-violet-200 bg-violet-50 text-violet-700";
   return "border-amber-200 bg-amber-50 text-amber-700";
 }
 

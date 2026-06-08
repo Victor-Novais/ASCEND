@@ -36,7 +36,7 @@ const scenarioFields = [
   { key: "currentScenario", label: "Cenário Atual (AS-IS)" },
   { key: "desiredScenario", label: "Cenário Desejado (TO-BE)" },
   { key: "legalRequirements", label: "Requisitos Legais e Normativos" },
-  { key: "strategicAlignment", label: "Alinhamento Estratégico" },
+  { key: "strategicGoals", label: "Alinhamento Estratégico" },
 ] as const;
 
 const statusStyles: Record<PDTIStatus, string> = {
@@ -107,7 +107,7 @@ function buildExportText(data: PDTI) {
     `Missão: ${data.mission || "—"}`,
     `Visão: ${data.vision || "—"}`,
     `Valores: ${data.values || "—"}`,
-    `Alinhamento Estratégico: ${data.strategicAlignment || "—"}`,
+    `Alinhamento Estratégico: ${data.strategicGoals || "—"}`,
     `Requisitos Legais: ${data.legalRequirements || "—"}`,
     `Cenário Atual: ${data.currentScenario || "—"}`,
     `Cenário Desejado: ${data.desiredScenario || "—"}`,
@@ -126,7 +126,6 @@ function buildExportText(data: PDTI) {
   (data.objectives ?? []).forEach((objective, index) => {
     lines.push(`${index + 1}. ${objective.title}`);
     lines.push(`   Prioridade: ${objective.priority}`);
-    lines.push(`   Categoria: ${objective.category}`);
     lines.push(`   Status: ${objective.status}`);
     lines.push(`   Descrição: ${objective.description || "—"}`);
     lines.push(`   Ações: ${(objective.actions ?? []).length || 0}`);
@@ -138,7 +137,7 @@ function buildExportText(data: PDTI) {
     lines.push(`   Unidade: ${indicator.unit}`);
     lines.push(`   Baseline: ${indicator.baseline}`);
     lines.push(`   Meta: ${indicator.target}`);
-    lines.push(`   Atual: ${indicator.current}`);
+    lines.push(`   Atual: ${indicator.currentValue}`);
     lines.push(`   % Atingido: ${indicator.achievedPercent ?? 0}`);
     lines.push(`   Frequência: ${indicator.frequency}`);
   });
@@ -162,7 +161,7 @@ function buildWordHtml(data: PDTI) {
     `<p><strong>Empresa:</strong> ${escapeHtml(data.company?.name ?? `#${data.companyId}`)}</p>`,
     `<p><strong>Ano:</strong> ${escapeHtml(data.year)} | <strong>Período:</strong> ${escapeHtml(data.period)} | <strong>Status:</strong> ${escapeHtml(data.status)}</p>`,
     `<h2>Visão Geral</h2>`,
-    `<ul><li><strong>Missão:</strong> ${escapeHtml(data.mission || "—")}</li><li><strong>Visão:</strong> ${escapeHtml(data.vision || "—")}</li><li><strong>Valores:</strong> ${escapeHtml(data.values || "—")}</li><li><strong>Alinhamento Estratégico:</strong> ${escapeHtml(data.strategicAlignment || "—")}</li><li><strong>Requisitos Legais:</strong> ${escapeHtml(data.legalRequirements || "—")}</li><li><strong>Cenário Atual:</strong> ${escapeHtml(data.currentScenario || "—")}</li><li><strong>Cenário Desejado:</strong> ${escapeHtml(data.desiredScenario || "—")}</li></ul>`,
+    `<ul><li><strong>Missão:</strong> ${escapeHtml(data.mission || "—")}</li><li><strong>Visão:</strong> ${escapeHtml(data.vision || "—")}</li><li><strong>Valores:</strong> ${escapeHtml(data.values || "—")}</li><li><strong>Alinhamento Estratégico:</strong> ${escapeHtml(data.strategicGoals || "—")}</li><li><strong>Requisitos Legais:</strong> ${escapeHtml(data.legalRequirements || "—")}</li><li><strong>Cenário Atual:</strong> ${escapeHtml(data.currentScenario || "—")}</li><li><strong>Cenário Desejado:</strong> ${escapeHtml(data.desiredScenario || "—")}</li></ul>`,
   ];
 
   const diagnostic = normalizeDiagnostic(data.diagnostic);
@@ -175,7 +174,7 @@ function buildWordHtml(data: PDTI) {
   sections.push((data.objectives ?? []).map((objective, index) => `
     <section>
       <h3>${index + 1}. ${escapeHtml(objective.title)}</h3>
-      <p><strong>Prioridade:</strong> ${escapeHtml(objective.priority)} | <strong>Categoria:</strong> ${escapeHtml(objective.category)} | <strong>Status:</strong> ${escapeHtml(objective.status)}</p>
+      <p><strong>Prioridade:</strong> ${escapeHtml(objective.priority)} | <strong>Status:</strong> ${escapeHtml(objective.status)}</p>
       <p><strong>Descrição:</strong> ${escapeHtml(objective.description || "—")}</p>
       <p><strong>Ações vinculadas:</strong> ${escapeHtml((objective.actions ?? []).length)}</p>
     </section>
@@ -186,7 +185,7 @@ function buildWordHtml(data: PDTI) {
     <section>
       <h3>${index + 1}. ${escapeHtml(indicator.name)}</h3>
       <p><strong>Unidade:</strong> ${escapeHtml(indicator.unit)} | <strong>Frequência:</strong> ${escapeHtml(indicator.frequency)}</p>
-      <p><strong>Baseline:</strong> ${escapeHtml(indicator.baseline)} | <strong>Meta:</strong> ${escapeHtml(indicator.target)} | <strong>Atual:</strong> ${escapeHtml(indicator.current)}</p>
+      <p><strong>Baseline:</strong> ${escapeHtml(indicator.baseline)} | <strong>Meta:</strong> ${escapeHtml(indicator.target)} | <strong>Atual:</strong> ${escapeHtml(indicator.currentValue)}</p>
       <p><strong>% Atingido:</strong> ${escapeHtml(indicator.achievedPercent ?? 0)}</p>
     </section>
   `).join(""));
@@ -231,7 +230,6 @@ export default function PDTIDetailPage() {
     title: "",
     description: "",
     priority: "MEDIA",
-    category: "PROCESSOS",
     status: "EM_REVISAO",
   });
   const [newIndicatorDraft, setNewIndicatorDraft] = useState({
@@ -239,7 +237,7 @@ export default function PDTIDetailPage() {
     unit: "%",
     baseline: "0",
     target: "100",
-    current: "0",
+    currentValue: "0",
     frequency: "Mensal",
   });
 
@@ -251,7 +249,7 @@ export default function PDTIDetailPage() {
       mission: plan.mission ?? "",
       vision: plan.vision ?? "",
       values: plan.values ?? "",
-      strategicAlignment: plan.strategicAlignment ?? "",
+      strategicGoals: plan.strategicGoals ?? "",
       legalRequirements: plan.legalRequirements ?? "",
       currentScenario: plan.currentScenario ?? "",
       desiredScenario: plan.desiredScenario ?? "",
@@ -329,7 +327,6 @@ export default function PDTIDetailPage() {
       title: newObjectiveDraft.title.trim(),
       description: newObjectiveDraft.description.trim() || null,
       priority: newObjectiveDraft.priority,
-      category: newObjectiveDraft.category,
       status: newObjectiveDraft.status,
       actions: [],
     };
@@ -340,7 +337,6 @@ export default function PDTIDetailPage() {
       title: "",
       description: "",
       priority: "MEDIA",
-      category: "PROCESSOS",
       status: "EM_REVISAO",
     });
 
@@ -380,11 +376,11 @@ export default function PDTIDetailPage() {
       unit: newIndicatorDraft.unit.trim() || "%",
       baseline: Number(newIndicatorDraft.baseline) || 0,
       target: Number(newIndicatorDraft.target) || 0,
-      current: Number(newIndicatorDraft.current) || 0,
+      currentValue: Number(newIndicatorDraft.currentValue) || 0,
       achievedPercent: (() => {
         const target = Number(newIndicatorDraft.target) || 0;
         if (!target) return 0;
-        return Math.min(100, Math.max(0, (Number(newIndicatorDraft.current) / target) * 100));
+        return Math.min(100, Math.max(0, (Number(newIndicatorDraft.currentValue) / target) * 100));
       })(),
       frequency: newIndicatorDraft.frequency.trim() || "Mensal",
     };
@@ -396,7 +392,7 @@ export default function PDTIDetailPage() {
       unit: "%",
       baseline: "0",
       target: "100",
-      current: "0",
+      currentValue: "0",
       frequency: "Mensal",
     });
 
@@ -783,14 +779,6 @@ export default function PDTIDetailPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Categoria</label>
-                <Input
-                  value={newObjectiveDraft.category}
-                  onChange={(event) => setNewObjectiveDraft((current) => ({ ...current, category: event.target.value }))}
-                  placeholder="INFRAESTRUTURA"
-                />
-              </div>
-              <div>
                 <label className="mb-2 block text-sm font-medium">Prioridade</label>
                 <Select
                   value={newObjectiveDraft.priority}
@@ -844,7 +832,7 @@ export default function PDTIDetailPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <CardTitle className="text-base">{objective.title}</CardTitle>
-                      <p className="mt-1 text-xs text-muted-foreground">{objective.category} · {objective.priority}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{objective.priority}</p>
                     </div>
                     <div className="flex gap-2">
                       <Badge className={statusStyles[objective.status as PDTIStatus] ?? "border-slate-200 bg-slate-100 text-slate-700"}>{objective.status}</Badge>
@@ -967,8 +955,8 @@ export default function PDTIDetailPage() {
                 <label className="mb-2 block text-sm font-medium">Atual</label>
                 <Input
                   type="number"
-                  value={newIndicatorDraft.current}
-                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, current: event.target.value }))}
+                  value={newIndicatorDraft.currentValue}
+                  onChange={(event) => setNewIndicatorDraft((current) => ({ ...current, currentValue: event.target.value }))}
                 />
               </div>
               <div>
@@ -1010,7 +998,7 @@ export default function PDTIDetailPage() {
                     indicatorsDraft.map((indicator) => {
                       const baseline = toNumber(indicator.baseline);
                       const target = toNumber(indicator.target);
-                      const current = toNumber(indicator.current);
+                      const current = toNumber(indicator.currentValue);
                       const achieved = target > 0 ? Math.min(100, Math.max(0, (current / target) * 100)) : 0;
 
                       return (

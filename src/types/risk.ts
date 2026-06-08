@@ -12,6 +12,7 @@ export enum RiskStatus {
   EM_TRATAMENTO = "EM_TRATAMENTO",
   MITIGADO = "MITIGADO",
   ACEITO = "ACEITO",
+  TRANSFERIDO = "TRANSFERIDO",
 }
 
 export enum RiskTreatment {

@@ -169,7 +169,6 @@ export default function PDTIDocumentView({ pdti }: Props) {
                 <tr className="border-b border-gray-300 bg-gray-50">
                   <th className="py-2 pr-4 text-left font-semibold text-gray-600">Objetivo</th>
                   <th className="py-2 pr-4 text-left font-semibold text-gray-600">Prioridade</th>
-                  <th className="py-2 pr-4 text-left font-semibold text-gray-600">Categoria</th>
                   <th className="py-2 text-left font-semibold text-gray-600">Status</th>
                 </tr>
               </thead>
@@ -179,12 +178,11 @@ export default function PDTIDocumentView({ pdti }: Props) {
                     <tr key={obj.id} className="border-b border-gray-100">
                       <td className="py-2 pr-4 font-medium text-gray-800">{obj.title}</td>
                       <td className="py-2 pr-4 text-gray-600">{obj.priority}</td>
-                      <td className="py-2 pr-4 text-gray-600">{obj.category}</td>
                       <td className="py-2 text-gray-600">{obj.status}</td>
                     </tr>
                     {(obj.actions ?? []).length > 0 && (
                       <tr key={`${obj.id}-actions`} className="border-b border-gray-100 bg-gray-50">
-                        <td colSpan={4} className="py-2 pl-6">
+                        <td colSpan={3} className="py-2 pl-6">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-400">
@@ -249,7 +247,7 @@ export default function PDTIDocumentView({ pdti }: Props) {
                     <td className="py-2 pr-4 text-gray-600">{kpi.unit}</td>
                     <td className="py-2 pr-4 text-gray-600">{kpi.baseline}</td>
                     <td className="py-2 pr-4 text-gray-600">{kpi.target}</td>
-                    <td className="py-2 pr-4 text-gray-600">{kpi.current}</td>
+                    <td className="py-2 pr-4 text-gray-600">{kpi.currentValue}</td>
                     <td className="py-2 text-gray-600">{kpi.frequency}</td>
                   </tr>
                 ))}
@@ -260,7 +258,7 @@ export default function PDTIDocumentView({ pdti }: Props) {
       </section>
 
       {/* ── Seção 6 — Requisitos Legais ── */}
-      {(pdti.legalRequirements || pdti.strategicAlignment) && (
+      {(pdti.legalRequirements || pdti.strategicGoals) && (
         <section className="mb-12">
           <SectionHeader number="06" title="Requisitos Legais e Alinhamento Estratégico" />
           {pdti.legalRequirements && (
@@ -273,13 +271,13 @@ export default function PDTIDocumentView({ pdti }: Props) {
               </p>
             </div>
           )}
-          {pdti.strategicAlignment && (
+          {pdti.strategicGoals && (
             <div>
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Alinhamento Estratégico
               </h3>
               <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">
-                {pdti.strategicAlignment}
+                {pdti.strategicGoals}
               </p>
             </div>
           )}

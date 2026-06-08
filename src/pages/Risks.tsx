@@ -175,7 +175,7 @@ function generateRisksXlsx(
       risk.impact,
       risk.responsible || "-",
       formatReviewDate(risk.reviewDate),
-      risk.notes || "-",
+      risk.treatment || "-",
     ]),
   ];
 
