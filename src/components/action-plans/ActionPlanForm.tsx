@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -23,7 +24,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
@@ -119,7 +119,7 @@ function getDefaultValues(plan?: ActionPlan | null, fixedCompanyId?: number): Ac
     whereLocation: plan?.whereLocation ?? "",
     howMethod: plan?.howMethod ?? "",
     howMuchCost: plan?.howMuchCost ?? undefined,
-    howMuchCurrency: (plan?.howMuchCurrency as "BRL" | "USD" | "EUR" | undefined) ?? undefined,
+    howMuchCurrency: (plan?.howMuchCurrency as "BRL" | "USD" | "EUR" | undefined) ?? "BRL",
     companyId: plan?.companyId ?? fixedCompanyId ?? 0,
     assessmentId: plan?.assessmentId ?? undefined,
   };
@@ -167,7 +167,9 @@ export default function ActionPlanForm({
       whereLocation: values.whereLocation?.trim() || undefined,
       howMethod: values.howMethod?.trim() || undefined,
       howMuchCost: Number.isFinite(values.howMuchCost ?? NaN) ? values.howMuchCost : undefined,
-      howMuchCurrency: values.howMuchCurrency || undefined,
+      howMuchCurrency: Number.isFinite(values.howMuchCost ?? NaN)
+        ? values.howMuchCurrency || "BRL"
+        : undefined,
       companyId: values.companyId,
       assessmentId: values.assessmentId || undefined,
     } satisfies CreateActionPlanInput;
@@ -181,18 +183,11 @@ export default function ActionPlanForm({
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{plan ? "Editar plano" : "Novo plano"}</SheetTitle>
-          <SheetDescription>Organize os dados de identificação e os detalhes 5W2H em abas separadas.</SheetDescription>
+          <SheetDescription>Preencha os dados do plano de ação. A metodologia 5W2H é opcional.</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
           <form className="mt-6 space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
-            <Tabs defaultValue="identificacao" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-                <TabsTrigger value="5w2h">5W2H</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="identificacao" className="mt-4 space-y-5">
                 <FormField
                   control={form.control}
                   name="title"
@@ -433,12 +428,14 @@ export default function ActionPlanForm({
                     </FormItem>
                   )}
                 />
-              </TabsContent>
 
-              <TabsContent value="5w2h" className="mt-4 space-y-5">
-                <div className="rounded-xl border bg-slate-50/60 p-4">
-                  <p className="text-sm font-medium text-slate-900">Detalhes 5W2H</p>
-                  <p className="mt-1 text-xs text-slate-500">Preencha os objetivos, justificativas, local, método, custo e moeda da ação.</p>
+                <div className="space-y-4 pt-2">
+                  <p className="text-sm font-medium text-muted-foreground">Metodologia 5W2H (opcional)</p>
+                  <div className="relative flex items-center">
+                    <Separator className="flex-1" />
+                    <span className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">5W2H</span>
+                    <Separator className="flex-1" />
+                  </div>
                 </div>
 
                 <FormField
@@ -446,7 +443,7 @@ export default function ActionPlanForm({
                   name="whatObjective"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>O Quê? (Objetivo da Ação)</FormLabel>
+                      <FormLabel>O Quê</FormLabel>
                       <FormControl>
                         <Textarea className="min-h-24" placeholder="Defina o objetivo da ação" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -460,7 +457,7 @@ export default function ActionPlanForm({
                   name="whyJustification"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Por Quê? (Justificativa)</FormLabel>
+                      <FormLabel>Por Quê</FormLabel>
                       <FormControl>
                         <Textarea className="min-h-24" placeholder="Explique a motivação da ação" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -474,7 +471,7 @@ export default function ActionPlanForm({
                   name="whereLocation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Onde? (Local de Aplicação)</FormLabel>
+                      <FormLabel>Onde</FormLabel>
                       <FormControl>
                         <Input placeholder="Local ou área de aplicação" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -488,7 +485,7 @@ export default function ActionPlanForm({
                   name="howMethod"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Como? (Método/Estratégia)</FormLabel>
+                      <FormLabel>Como</FormLabel>
                       <FormControl>
                         <Textarea className="min-h-24" placeholder="Descreva o método ou estratégia" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -497,7 +494,7 @@ export default function ActionPlanForm({
                   )}
                 />
 
-                <div className="grid gap-4 sm:grid-cols-[1.5fr_0.8fr]">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="howMuchCost"
@@ -526,10 +523,10 @@ export default function ActionPlanForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Moeda</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? "BRL"}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
+                              <SelectValue placeholder="BRL" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -545,8 +542,6 @@ export default function ActionPlanForm({
                     )}
                   />
                 </div>
-              </TabsContent>
-            </Tabs>
 
             <SheetFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
