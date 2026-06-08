@@ -45,7 +45,10 @@ import {
 } from "@/hooks/usePDTI";
 import { useDownloadPdtiDocx, useDownloadPdtiPdf } from "@/hooks/useExports";
 import { useDocumentExport } from "@/hooks/useDocumentExport";
-import { downloadPdtiPdf, downloadPdtiDocx } from "@/services/documents.service";
+import {
+  downloadPdtiDocx as downloadPdtiDocxFile,
+  downloadPdtiPdf as downloadPdtiPdfFile,
+} from "@/services/documents.service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -703,13 +706,13 @@ export default function PDTIDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiPdf(planId), "PDF")}>
+              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiPdfFile(plan.id), "PDF")}>
                 <Download className="mr-2 h-4 w-4" />
                 Baixar PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiDocx(planId), "Word (.docx)")}>
+              <DropdownMenuItem onClick={() => void exportDoc(() => downloadPdtiDocxFile(plan.id), "Word (.docx)")}>
                 <FileText className="mr-2 h-4 w-4" />
-                Baixar Word (.docx)
+                Word (.docx)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
