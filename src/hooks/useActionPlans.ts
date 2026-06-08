@@ -81,12 +81,7 @@ export function useUpdateActionPlan() {
 export function useDeleteActionPlan() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      if (!window.confirm("Deseja realmente excluir este plano de ação?")) {
-        throw new Error("__ACTION_PLAN_DELETE_CANCELLED__");
-      }
-      return actionPlansService.remove(id);
-    },
+    mutationFn: (id: number) => actionPlansService.remove(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["action-plans"] });
       void queryClient.invalidateQueries({ queryKey: ["action-plans-stats"] });

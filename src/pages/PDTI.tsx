@@ -2,6 +2,16 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Download, FileSpreadsheet, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +32,7 @@ import { useCompanies } from "@/hooks/useCompanies";
 import { useCreatePDTI, useDeletePDTI, useGeneratePDTI, usePDTIs } from "@/hooks/usePDTI";
 import type { Assessment } from "@/lib/types";
 import { pdtiService } from "@/services/pdti.service";
-import { PDTIStatus, type CreatePDTIInput } from "@/types/pdti";
+import { PDTIStatus, type CreatePDTIInput, type PDTI } from "@/types/pdti";
 
 const statusStyles: Record<PDTIStatus, string> = {
   [PDTIStatus.RASCUNHO]: "border-slate-200 bg-slate-100 text-slate-700",
@@ -56,6 +66,7 @@ export default function PDTIPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
   const [createState, setCreateState] = useState(defaultCreateState);
+  const [deleteTarget, setDeleteTarget] = useState<PDTI | null>(null);
 
   const companiesQuery = useCompanies();
   const assessmentsQuery = useAssessments();
@@ -136,12 +147,13 @@ export default function PDTIPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deletePDTI.mutateAsync(id);
+      await deletePDTI.mutateAsync(deleteTarget.id);
       toast.success("PDTI removido com sucesso.");
+      setDeleteTarget(null);
     } catch (error) {
-      if (error instanceof Error && error.message === "__PDTI_DELETE_CANCELLED__") return;
       toast.error(error instanceof Error ? error.message : "Falha ao excluir PDTI.");
     }
   };
@@ -257,7 +269,7 @@ export default function PDTIPage() {
                             <Download className="mr-1 h-4 w-4" />
                             Exportar
                           </Button>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => void handleDelete(plan.id)}>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setDeleteTarget(plan)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </Button>
@@ -421,6 +433,27 @@ export default function PDTIPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir PDTI?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação remove permanentemente o PDTI
+              {deleteTarget ? ` "${deleteTarget.title}"` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void handleDelete()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

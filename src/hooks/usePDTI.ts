@@ -43,12 +43,7 @@ export function useUpdatePDTI() {
 export function useDeletePDTI() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      if (!window.confirm("Deseja realmente excluir este PDTI?")) {
-        throw new Error("__PDTI_DELETE_CANCELLED__");
-      }
-      return pdtiService.remove(id);
-    },
+    mutationFn: (id: number) => pdtiService.remove(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["pdti"] });
     },

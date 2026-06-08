@@ -37,6 +37,16 @@ import {
   getPriorityBadgeClass,
   getStatusBadgeClass,
 } from "@/components/action-plans/action-plan-utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -126,6 +136,7 @@ export default function ActionPlansPage() {
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
   const [viewMode, setViewMode] = useState<"table" | "5w2h">("table");
+  const [deleteTarget, setDeleteTarget] = useState<ActionPlan | null>(null);
 
   const companiesQuery = useCompanies();
   const usersQuery = useUsers();
@@ -214,14 +225,13 @@ export default function ActionPlansPage() {
     }
   };
 
-  const handleDelete = async (planId: number) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteActionPlan.mutateAsync(planId);
+      await deleteActionPlan.mutateAsync(deleteTarget.id);
       toast.success("Plano removido com sucesso.");
+      setDeleteTarget(null);
     } catch (error) {
-      if (error instanceof Error && error.message === "__ACTION_PLAN_DELETE_CANCELLED__") {
-        return;
-      }
       toast.error(error instanceof Error ? error.message : "Falha ao excluir plano.");
     }
   };
@@ -424,7 +434,7 @@ export default function ActionPlansPage() {
                       setEditingPlan(editablePlan);
                       setFormOpen(true);
                     }}
-                    onDelete={(planId) => void handleDelete(planId)}
+                    onDelete={() => setDeleteTarget(plan)}
                   />
                 ))}
               </div>
@@ -498,7 +508,7 @@ export default function ActionPlansPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               Editar
                             </Button>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => void handleDelete(plan.id)}>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setDeleteTarget(plan)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
                             </Button>
@@ -569,6 +579,27 @@ export default function ActionPlansPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir plano de ação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação remove permanentemente o plano
+              {deleteTarget ? ` "${deleteTarget.title}"` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void handleDelete()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
