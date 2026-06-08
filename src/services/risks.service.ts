@@ -7,6 +7,7 @@ import {
   type Risk,
   type RiskFilters,
   type RiskMatrixCell,
+  type RiskMatrixComparison,
   type RiskStats,
   type UpdateRiskInput,
 } from "@/types/risk";
@@ -18,6 +19,14 @@ type RiskMatrixResponse =
       matrix?: RiskMatrixCell[];
       cells?: RiskMatrixCell[];
       data?: RiskMatrixCell[];
+    };
+type RiskMatrixComparisonResponse =
+  | RiskMatrixComparison
+  | {
+      inherent?: RiskMatrixCell[];
+      residual?: RiskMatrixCell[];
+      inerente?: RiskMatrixCell[];
+      residualMatrix?: RiskMatrixCell[];
     };
 type RiskGenerateResponse =
   | GenerateRisksResponse
@@ -122,6 +131,22 @@ function normalizeMatrix(response: RiskMatrixResponse): RiskMatrixCell[] {
   return matrix;
 }
 
+function normalizeMatrixComparison(response: RiskMatrixComparisonResponse): RiskMatrixComparison {
+  const inherentSource = "inherent" in response ? response.inherent : undefined;
+  const inerenteSource = "inerente" in response ? response.inerente : undefined;
+  const residualSource =
+    "residual" in response
+      ? response.residual
+      : "residualMatrix" in response
+        ? response.residualMatrix
+        : undefined;
+
+  return {
+    inherent: normalizeMatrix(inherentSource ?? inerenteSource ?? []),
+    residual: normalizeMatrix(residualSource ?? []),
+  };
+}
+
 export const risksService = {
   list(filters?: RiskFilters) {
     return api.get<RiskListResponse>("/risks", filters).then(normalizeList);
@@ -138,6 +163,14 @@ export const risksService = {
     return api
       .get<RiskMatrixResponse>("/risks/matrix", companyId ? { companyId } : undefined)
       .then(normalizeMatrix);
+  },
+  getMatrixComparison(companyId?: number) {
+    return api
+      .get<RiskMatrixComparisonResponse>(
+        "/risks/matrix-comparison",
+        companyId ? { companyId } : undefined,
+      )
+      .then(normalizeMatrixComparison);
   },
   create(payload: CreateRiskInput) {
     return api.post<Risk>("/risks", payload);

@@ -128,3 +128,8 @@ export interface RiskMatrixCell {
   riskLevel: RiskLevel;
   count: number;
 }
+
+export interface RiskMatrixComparison {
+  inherent: RiskMatrixCell[];
+  residual: RiskMatrixCell[];
+}

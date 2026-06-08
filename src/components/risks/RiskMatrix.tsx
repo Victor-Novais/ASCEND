@@ -4,26 +4,33 @@ import { Camera } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { RiskMatrixCell } from "@/types/risk";
-import { getRiskLevelFromScore, riskLevelLabels } from "@/components/risks/risk-utils";
+import {
+  getRiskLevelFromScore,
+  getRiskMatrixColor,
+  getRiskMatrixHoverColor,
+  riskLevelLabels,
+} from "@/components/risks/risk-utils";
 
 const impactLabels = ["Muito Baixo", "Baixo", "Medio", "Alto", "Muito Alto"];
 const probabilityLabels = ["Muito Baixa", "Baixa", "Media", "Alta", "Muito Alta"];
 
 type Props = {
   data: RiskMatrixCell[];
-  onCellClick: (probability: number, impact: number) => void;
+  onCellClick?: (probability: number, impact: number) => void;
   selectedCell?: { probability: number; impact: number } | null;
   companyId?: number | null;
+  title?: string;
+  readOnly?: boolean;
 };
 
-function getCellColor(score: number) {
-  if (score <= 5) return "bg-green-200 hover:bg-green-300";
-  if (score <= 11) return "bg-yellow-200 hover:bg-yellow-300";
-  if (score <= 19) return "bg-orange-200 hover:bg-orange-300";
-  return "bg-red-200 hover:bg-red-300";
-}
-
-export default function RiskMatrix({ data, onCellClick, selectedCell, companyId }: Props) {
+export default function RiskMatrix({
+  data,
+  onCellClick,
+  selectedCell,
+  companyId,
+  title,
+  readOnly = false,
+}: Props) {
   const matrixRef = useRef<HTMLDivElement>(null);
   const cells = new Map(data.map((cell) => [`${cell.probability}-${cell.impact}`, cell]));
 
@@ -39,14 +46,17 @@ export default function RiskMatrix({ data, onCellClick, selectedCell, companyId 
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => void exportMatrix()}
-        className="absolute right-0 top-0 z-10 flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm hover:bg-muted"
-      >
-        <Camera className="h-3.5 w-3.5" />
-        Exportar PNG
-      </button>
+      {title ? <p className="mb-3 text-center text-sm font-semibold">{title}</p> : null}
+      {!readOnly ? (
+        <button
+          type="button"
+          onClick={() => void exportMatrix()}
+          className="absolute right-0 top-0 z-10 flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm hover:bg-muted"
+        >
+          <Camera className="h-3.5 w-3.5" />
+          Exportar PNG
+        </button>
+      ) : null}
       <div ref={matrixRef}>
       <div className="overflow-x-auto">
       <div className="grid min-w-[760px] grid-cols-[140px_repeat(5,minmax(96px,1fr))] gap-2">
@@ -79,24 +89,49 @@ export default function RiskMatrix({ data, onCellClick, selectedCell, companyId 
               const isSelected =
                 selectedCell?.probability === probability && selectedCell?.impact === impact;
 
+              const cellStyle = {
+                backgroundColor: getRiskMatrixColor(score),
+              };
+
+              const cellContent = (
+                <>
+                  {cell.count > 0 ? (
+                    <span className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full bg-slate-900 px-3 text-sm font-semibold text-white">
+                      {cell.count}
+                    </span>
+                  ) : null}
+                </>
+              );
+
+              const cellClassName = cn(
+                "relative flex min-h-[96px] items-center justify-center rounded-2xl border transition-colors",
+                isSelected && "ring-2 ring-foreground/30 border-foreground",
+                readOnly && "cursor-default",
+              );
+
               return (
                 <Tooltip key={`${probability}-${impact}`}>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => onCellClick(probability, impact)}
-                      className={cn(
-                        "relative flex min-h-[96px] items-center justify-center rounded-2xl border transition-colors",
-                        getCellColor(score),
-                        isSelected && "ring-2 ring-foreground/30 border-foreground",
-                      )}
-                    >
-                      {cell.count > 0 ? (
-                        <span className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full bg-slate-900 px-3 text-sm font-semibold text-white">
-                          {cell.count}
-                        </span>
-                      ) : null}
-                    </button>
+                    {readOnly ? (
+                      <div className={cellClassName} style={cellStyle}>
+                        {cellContent}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onCellClick?.(probability, impact)}
+                        className={cellClassName}
+                        style={cellStyle}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.backgroundColor = getRiskMatrixHoverColor(score);
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.backgroundColor = getRiskMatrixColor(score);
+                        }}
+                      >
+                        {cellContent}
+                      </button>
+                    )}
                   </TooltipTrigger>
                   <TooltipContent>
                     {`Prob: ${probability} × Impacto: ${impact} = Score: ${score} (${riskLevelLabels[cell.riskLevel]})`}

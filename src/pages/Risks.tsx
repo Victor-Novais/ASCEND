@@ -80,6 +80,7 @@ import {
   useGenerateRisksFromAssessment,
   useRisk,
   useRiskMatrix,
+  useRiskMatrixComparison,
   useRisks,
   useRiskStats,
   useUpdateRisk,
@@ -255,9 +256,11 @@ export default function RisksPage() {
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [matrixViewMode, setMatrixViewMode] = useState<"current" | "comparison">("current");
 
   const companiesQuery = useCompanies();
   const firstCompanyId = companiesQuery.data?.[0]?.id;
+  const activeCompanyId = isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId;
 
   const filters: RiskFilters = {
     status: statusFilter === "ALL" ? undefined : statusFilter,
@@ -268,7 +271,11 @@ export default function RisksPage() {
 
   const risksQuery = useRisks(filters);
   const statsQuery = useRiskStats(isAdmin ? companyFilter ?? undefined : firstCompanyId);
-  const matrixQuery = useRiskMatrix(isAdmin ? companyFilter ?? undefined : firstCompanyId);
+  const matrixQuery = useRiskMatrix(activeCompanyId, matrixViewMode === "current");
+  const matrixComparisonQuery = useRiskMatrixComparison(
+    activeCompanyId,
+    matrixViewMode === "comparison",
+  );
   const usersQuery = useUsers();
   const assessmentsQuery = useAssessments();
   const detailQuery = useRisk(selectedRiskId ?? 0);
@@ -464,35 +471,84 @@ export default function RisksPage() {
       )}
 
       <Card className="rounded-2xl">
-        <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <CardTitle className="text-lg">Matriz de Riscos (Probabilidade × Impacto)</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Clique em uma celula para filtrar a tabela por probabilidade e impacto.
+              {matrixViewMode === "current"
+                ? "Clique em uma celula para filtrar a tabela por probabilidade e impacto."
+                : "Compare a distribuicao dos riscos inerentes e residuais lado a lado."}
             </p>
           </div>
-          {selectedCell ? (
-            <Button variant="ghost" onClick={() => setSelectedCell(null)}>
-              Limpar selecao
-            </Button>
-          ) : null}
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+            <div className="inline-flex rounded-full border bg-muted/40 p-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={matrixViewMode === "current" ? "default" : "ghost"}
+                className="rounded-full"
+                onClick={() => {
+                  setMatrixViewMode("current");
+                  setSelectedCell(null);
+                }}
+              >
+                Matriz Atual
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={matrixViewMode === "comparison" ? "default" : "ghost"}
+                className="rounded-full"
+                onClick={() => {
+                  setMatrixViewMode("comparison");
+                  setSelectedCell(null);
+                }}
+              >
+                Comparação Inerente vs Residual
+              </Button>
+            </div>
+            {matrixViewMode === "current" && selectedCell ? (
+              <Button variant="ghost" onClick={() => setSelectedCell(null)}>
+                Limpar selecao
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
-          {matrixQuery.isLoading ? (
+          {matrixViewMode === "current" ? (
+            matrixQuery.isLoading ? (
+              <SkeletonBlock className="h-[420px] w-full" />
+            ) : (
+              <RiskMatrix
+                data={matrixQuery.data ?? []}
+                selectedCell={selectedCell}
+                companyId={activeCompanyId}
+                onCellClick={(probability, impact) =>
+                  setSelectedCell((current) =>
+                    current?.probability === probability && current?.impact === impact
+                      ? null
+                      : { probability, impact },
+                  )
+                }
+              />
+            )
+          ) : matrixComparisonQuery.isLoading ? (
             <SkeletonBlock className="h-[420px] w-full" />
           ) : (
-            <RiskMatrix
-              data={matrixQuery.data ?? []}
-              selectedCell={selectedCell}
-              companyId={isAdmin ? (companyFilter ?? firstCompanyId) : firstCompanyId}
-              onCellClick={(probability, impact) =>
-                setSelectedCell((current) =>
-                  current?.probability === probability && current?.impact === impact
-                    ? null
-                    : { probability, impact },
-                )
-              }
-            />
+            <div className="grid gap-6 xl:grid-cols-2">
+              <RiskMatrix
+                title="Risco Inerente"
+                data={matrixComparisonQuery.data?.inherent ?? []}
+                companyId={activeCompanyId}
+                readOnly
+              />
+              <RiskMatrix
+                title="Risco Residual"
+                data={matrixComparisonQuery.data?.residual ?? []}
+                companyId={activeCompanyId}
+                readOnly
+              />
+            </div>
           )}
         </CardContent>
       </Card>

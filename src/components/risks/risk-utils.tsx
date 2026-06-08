@@ -90,10 +90,17 @@ export function getRiskCategoryBadgeClass(category: string) {
 }
 
 export function getRiskMatrixColor(score: number) {
-  if (score <= 5) return "#22C55E";
-  if (score <= 11) return "#EAB308";
-  if (score <= 19) return "#F97316";
-  return "#EF4444";
+  if (score <= 5) return "#16a34a";
+  if (score <= 11) return "#ca8a04";
+  if (score <= 19) return "#ea580c";
+  return "#dc2626";
+}
+
+export function getRiskMatrixHoverColor(score: number) {
+  if (score <= 5) return "#15803d";
+  if (score <= 11) return "#a16207";
+  if (score <= 19) return "#c2410c";
+  return "#b91c1c";
 }
 
 export function getRiskMatrixLabel(probability: number, impact: number) {

@@ -38,6 +38,15 @@ export function useRiskMatrix(companyId?: number, enabled = true) {
   });
 }
 
+export function useRiskMatrixComparison(companyId?: number, enabled = true) {
+  return useQuery({
+    queryKey: ["risk-matrix-comparison", companyId],
+    queryFn: () => risksService.getMatrixComparison(companyId),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useCreateRisk() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -46,6 +55,7 @@ export function useCreateRisk() {
       void queryClient.invalidateQueries({ queryKey: ["risks"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-stats"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-matrix"] });
+      void queryClient.invalidateQueries({ queryKey: ["risk-matrix-comparison"] });
     },
   });
 }
@@ -58,6 +68,7 @@ export function useGenerateRisksFromAssessment() {
       void queryClient.invalidateQueries({ queryKey: ["risks"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-stats"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-matrix"] });
+      void queryClient.invalidateQueries({ queryKey: ["risk-matrix-comparison"] });
     },
   });
 }
@@ -72,6 +83,7 @@ export function useUpdateRisk() {
       void queryClient.invalidateQueries({ queryKey: ["risks", variables.id] });
       void queryClient.invalidateQueries({ queryKey: ["risk-stats"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-matrix"] });
+      void queryClient.invalidateQueries({ queryKey: ["risk-matrix-comparison"] });
     },
   });
 }
@@ -84,6 +96,7 @@ export function useDeleteRisk() {
       void queryClient.invalidateQueries({ queryKey: ["risks"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-stats"] });
       void queryClient.invalidateQueries({ queryKey: ["risk-matrix"] });
+      void queryClient.invalidateQueries({ queryKey: ["risk-matrix-comparison"] });
     },
   });
 }
